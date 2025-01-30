@@ -5,6 +5,9 @@ import com.example.coinflow.models.SignupRequest;
 import com.example.coinflow.models.User;
 import com.example.coinflow.repositories.UserRepository;
 import com.example.coinflow.security.JwtCore;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/auth")
+@Tag(name = "Security")
 public class SecurityController {
 
     private UserRepository userRepository;
@@ -49,6 +53,15 @@ public class SecurityController {
     }
 
 
+    @Operation(
+            summary = "Регистрация нового пользователя",
+            description = "Создает нового пользователя с указанным именем пользователя, email и паролем. " +
+                    "Если имя пользователя или email уже существуют, возвращает ошибку.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Успешная регистрация пользователя"),
+                    @ApiResponse(responseCode = "400", description = "Ошибка: имя пользователя или email уже существуют")
+            }
+    )
     @PostMapping("/sign-up")
     ResponseEntity<?> signup(@RequestBody SignupRequest signupRequest) {
         if (userRepository.existsByUsername(signupRequest.getUsername())) {
@@ -67,6 +80,15 @@ public class SecurityController {
         return ResponseEntity.ok("Success");
     }
 
+    @Operation(
+            summary = "Авторизация пользователя",
+            description = "Проверяет учетные данные пользователя и возвращает JWT токен, если авторизация успешна. " +
+                    "Возвращает статус 401, если учетные данные неверны.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Успешная авторизация, возвращает JWT токен"),
+                    @ApiResponse(responseCode = "401", description = "Ошибка: неверные учетные данные")
+            }
+    )
     @PostMapping("/sign-in")
     ResponseEntity<?> signin(@RequestBody SigninRequest signinRequest) {
         Authentication authentication = null;
