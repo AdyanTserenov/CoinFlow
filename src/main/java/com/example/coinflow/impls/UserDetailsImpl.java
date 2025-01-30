@@ -1,5 +1,6 @@
-package com.example.coinflow;
+package com.example.coinflow.impls;
 
+import com.example.coinflow.models.User;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;

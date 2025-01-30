@@ -1,4 +1,4 @@
-package com.example.coinflow;
+package com.example.coinflow.contollers;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,10 +11,10 @@ import java.security.Principal;
 public class MainController {
     @GetMapping("/user")
     public String userAccess(Principal principal) {
-        if (principal == null)
+        System.out.println("principal");
+        if (principal == null) {
             return null;
+        }
         return principal.getName();
     }
-
-
 }

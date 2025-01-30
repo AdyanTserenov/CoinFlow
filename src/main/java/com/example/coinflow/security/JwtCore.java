@@ -1,5 +1,6 @@
-package com.example.coinflow;
+package com.example.coinflow.security;
 
+import com.example.coinflow.impls.UserDetailsImpl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
@@ -18,13 +19,19 @@ public class JwtCore {
     public String generateToken(Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl)authentication.getPrincipal();
 
-        return Jwts.builder().setSubject((userDetails.getUsername())).setIssuedAt(new Date())
+        return Jwts.builder()
+                .setSubject((userDetails.getUsername()))
+                .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + lifetime))
-                .signWith(SignatureAlgorithm.HS256, secret)
+                .signWith(SignatureAlgorithm.HS512, secret)
                 .compact();
     }
 
     public String getNameFromJwt(String token) {
-        return Jwts.parser().setSigningKey(secret).parseClaimsJwt(token).getBody().getSubject();
+        Claims claims = Jwts.parser()
+                .setSigningKey(secret)
+                .parseClaimsJwt(token)
+                .getBody();
+        return claims.getSubject();
     }
 }

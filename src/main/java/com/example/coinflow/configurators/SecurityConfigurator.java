@@ -1,5 +1,7 @@
-package com.example.coinflow;
+package com.example.coinflow.configurators;
 
+import com.example.coinflow.security.TokenFilter;
+import com.example.coinflow.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,8 +20,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
-
-import java.security.PublicKey;
 
 @Configuration
 @EnableWebSecurity

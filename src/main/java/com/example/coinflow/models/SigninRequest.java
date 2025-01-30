@@ -1,7 +1,6 @@
-package com.example.coinflow;
+package com.example.coinflow.models;
 
 import lombok.Data;
-import lombok.Getter;
 
 @Data
 public class SigninRequest {

@@ -1,6 +1,9 @@
-package com.example.coinflow;
+package com.example.coinflow.services;
 
 
+import com.example.coinflow.impls.UserDetailsImpl;
+import com.example.coinflow.models.User;
+import com.example.coinflow.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
