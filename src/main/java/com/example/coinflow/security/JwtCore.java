@@ -18,7 +18,6 @@ public class JwtCore {
 
     public String generateToken(Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl)authentication.getPrincipal();
-
         return Jwts.builder()
                 .setSubject((userDetails.getUsername()))
                 .setIssuedAt(new Date())
@@ -30,7 +29,7 @@ public class JwtCore {
     public String getNameFromJwt(String token) {
         Claims claims = Jwts.parser()
                 .setSigningKey(secret)
-                .parseClaimsJwt(token)
+                .parseClaimsJws(token)
                 .getBody();
         return claims.getSubject();
     }
