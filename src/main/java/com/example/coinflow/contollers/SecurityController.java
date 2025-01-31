@@ -16,11 +16,12 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/auth")
@@ -55,8 +56,8 @@ public class SecurityController {
 
     @Operation(
             summary = "Регистрация нового пользователя",
-            description = "Создает нового пользователя с указанным именем пользователя, email и паролем. " +
-                    "Если имя пользователя или email уже существуют, возвращает ошибку.",
+            description = "Создает нового пользователя с указанным именем пользователя, email и паролем " +
+                    "Если имя пользователя или email уже существуют, возвращает ошибку",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Успешная регистрация пользователя"),
                     @ApiResponse(responseCode = "400", description = "Ошибка: имя пользователя или email уже существуют")
@@ -82,8 +83,8 @@ public class SecurityController {
 
     @Operation(
             summary = "Авторизация пользователя",
-            description = "Проверяет учетные данные пользователя и возвращает JWT токен, если авторизация успешна. " +
-                    "Возвращает статус 401, если учетные данные неверны.",
+            description = "Проверяет учетные данные пользователя и возвращает JWT токен, если авторизация успешна " +
+                    "Возвращает статус 401, если учетные данные неверны",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Успешная авторизация, возвращает JWT токен"),
                     @ApiResponse(responseCode = "401", description = "Ошибка: неверные учетные данные")
@@ -99,6 +100,37 @@ public class SecurityController {
         }
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtCore.generateToken(authentication);
+        return ResponseEntity.ok(jwt);
+    }
+
+    @Operation(
+            summary = "OAuth2 Callback",
+            description = "Обрабатывает OAuth2 callback и генерирует JWT токен для аутентифицированного пользователя",
+            responses = {
+            @ApiResponse(responseCode = "200", description = "JWT токен успешно сгенерирован"),
+            @ApiResponse(responseCode = "404", description = "Пользователь не найден"),
+            @ApiResponse(responseCode = "500", description = "Внутрення ошибка сервера")
+            }
+    )
+    @GetMapping("/oauth2/callback")
+    public ResponseEntity<?> oauth2Callback(OAuth2AuthenticationToken authentication) {
+        String username = authentication.getPrincipal().getAttribute("username");
+        String email = authentication.getPrincipal().getAttribute("email");
+
+        User user = userRepository.findUserByUsername(username).orElseThrow(() -> new UsernameNotFoundException(
+                String.format("User '%s' not found", username)
+        ));
+
+        if (user == null) {
+            user = new User();
+            user.setUsername(username);
+            user.setEmail(email);
+            user.setPassword("");
+            userRepository.save(user);
+        }
+
+        String jwt = jwtCore.generateToken(new UsernamePasswordAuthenticationToken(user.getUsername(), null));
+
         return ResponseEntity.ok(jwt);
     }
 }
