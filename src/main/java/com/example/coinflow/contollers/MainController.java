@@ -31,4 +31,9 @@ public class MainController {
         }
         return principal.getName();
     }
+
+    @GetMapping("/check")
+    public String check() {
+        return "Check is working";
+    }
 }
