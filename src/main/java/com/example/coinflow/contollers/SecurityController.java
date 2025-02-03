@@ -1,8 +1,7 @@
 package com.example.coinflow.contollers;
 
-import com.example.coinflow.models.SigninRequest;
-import com.example.coinflow.models.SignupRequest;
-import com.example.coinflow.models.User;
+import com.example.coinflow.models.*;
+import com.example.coinflow.repositories.PasswordResetTokenRepository;
 import com.example.coinflow.repositories.UserRepository;
 import com.example.coinflow.security.JwtCore;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -22,7 +23,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
@@ -34,7 +37,10 @@ public class SecurityController {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtCore jwtCore;
+    private final JavaMailSender mailSender;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
+    @PostMapping("/sign-up")
     @Operation(
             summary = "Регистрация нового пользователя",
             description = "Создает нового пользователя с указанным именем пользователя, email и паролем " +
@@ -44,7 +50,6 @@ public class SecurityController {
                     @ApiResponse(responseCode = "400", description = "Ошибка: имя пользователя или email уже существуют")
             }
     )
-    @PostMapping("/sign-up")
     ResponseEntity<?> signup(@RequestBody SignupRequest signupRequest) {
         if (userRepository.existsByUsername(signupRequest.getUsername())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Choose different name");
@@ -62,6 +67,7 @@ public class SecurityController {
         return ResponseEntity.ok("Success");
     }
 
+    @PostMapping("/sign-in")
     @Operation(
             summary = "Авторизация пользователя",
             description = "Проверяет учетные данные пользователя и возвращает JWT токен, если авторизация успешна " +
@@ -71,7 +77,6 @@ public class SecurityController {
                     @ApiResponse(responseCode = "401", description = "Ошибка: неверные учетные данные")
             }
     )
-    @PostMapping("/sign-in")
     ResponseEntity<?> signin(@RequestBody SigninRequest signinRequest) {
         Authentication authentication = null;
         try {
@@ -84,6 +89,7 @@ public class SecurityController {
         return ResponseEntity.ok(jwt);
     }
 
+    @GetMapping("/oauth2/callback")
     @Operation(
             summary = "OAuth2 Callback",
             description = "Обрабатывает OAuth2 callback и генерирует JWT токен для аутентифицированного пользователя",
@@ -93,7 +99,6 @@ public class SecurityController {
             @ApiResponse(responseCode = "500", description = "Внутрення ошибка сервера")
             }
     )
-    @GetMapping("/oauth2/callback")
     public ResponseEntity<?> oauth2Callback(OAuth2AuthenticationToken authentication) {
         String username = authentication.getPrincipal().getAttribute("username");
         String email = authentication.getPrincipal().getAttribute("email");
@@ -113,5 +118,49 @@ public class SecurityController {
         String jwt = jwtCore.generateToken(new UsernamePasswordAuthenticationToken(user.getUsername(), null));
 
         return ResponseEntity.ok(jwt);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody PasswordResetRequest request) {
+        User user = userRepository.findUserByEmail(request.getEmail()).orElseThrow(() -> new UsernameNotFoundException(
+                String.format("User with email '%s' not found", request.getEmail())
+        ));
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User not found");
+        }
+
+        String token = UUID.randomUUID().toString();
+        PasswordResetToken passwordResetToken = new PasswordResetToken();
+        passwordResetToken.setToken(token);
+        passwordResetToken.setUser(user);
+        passwordResetToken.setExpiryDate(LocalDateTime.now().plusHours(1));
+        passwordResetTokenRepository.save(passwordResetToken);
+
+        String resetLink = "http://localhost:8080/auth/reset-password?token=" + token;
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom("abtserenov@edu.hse.ru");
+        message.setTo(request.getEmail());
+        message.setSubject("Password Reset Request");
+        message.setText("To reset your password, click the link below:\n" + resetLink);
+        mailSender.send(message);
+
+        return ResponseEntity.ok("Password reset link sent to your email");
+    }
+
+    @PostMapping("/reset-password/confirm")
+    public ResponseEntity<?> confirmResetPassword(@RequestParam String token, @RequestBody String newPassword) {
+        PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(token);
+        if (passwordResetToken == null || passwordResetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired token");
+        }
+
+        String hashed = passwordEncoder.encode(newPassword);
+        User user = passwordResetToken.getUser();
+        user.setPassword(hashed);
+        userRepository.save(user);
+
+        passwordResetTokenRepository.delete(passwordResetToken);
+
+        return ResponseEntity.ok("Password has been reset successfully");
     }
 }
