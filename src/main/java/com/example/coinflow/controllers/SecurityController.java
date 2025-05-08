@@ -87,21 +87,34 @@ public class SecurityController {
     }
 
     @PostMapping("/reset-password")
+    @Operation(
+            summary = "Запрос на сброс пароля",
+            description = "Отправляет email со ссылкой для сброса пароля на указанный email адрес. " +
+                    "Ссылка действительна в течение 1 часа. " +
+                    "Если пользователь с указанным email не найден, возвращает ошибку.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Ссылка для сброса пароля отправлена на email"),
+                    @ApiResponse(responseCode = "404", description = "Пользователь с указанным email не найден")
+            }
+    )
     public ResponseEntity<?> resetPassword(@RequestBody PasswordResetRequest request) {
-        User user = userRepository.findUserByEmail(request.getEmail()).orElseThrow(() -> new UsernameNotFoundException(
+        // 1. Находит пользователя по email
+        User user = userRepository.findUserByEmail(request.getEmail())
+            .orElseThrow(() -> new UsernameNotFoundException(
                 String.format("User with email '%s' not found", request.getEmail())
-        ));
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User not found");
-        }
+            ));
 
+        // 2. Генерирует уникальный токен
         String token = UUID.randomUUID().toString();
+        
+        // 3. Создает запись в базе данных с токеном
         PasswordResetToken passwordResetToken = new PasswordResetToken();
         passwordResetToken.setToken(token);
         passwordResetToken.setUser(user);
-        passwordResetToken.setExpiryDate(LocalDateTime.now().plusHours(1));
+        passwordResetToken.setExpiryDate(LocalDateTime.now().plusHours(1)); // Токен действителен 1 час
         passwordResetTokenRepository.save(passwordResetToken);
 
+        // 4. Отправляет email с ссылкой для сброса
         String resetLink = "http://localhost:8080/auth/reset-password?token=" + token;
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom("abtserenov@edu.hse.ru");
@@ -114,7 +127,18 @@ public class SecurityController {
     }
 
     @PostMapping("/reset-password/confirm")
+    @Operation(
+            summary = "Подтверждение сброса пароля",
+            description = "Устанавливает новый пароль для пользователя по полученному токену. " +
+                    "Токен должен быть действительным и не истекшим (действителен 1 час). " +
+                    "После успешного сброса пароля токен становится недействительным.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Пароль успешно изменен"),
+                    @ApiResponse(responseCode = "400", description = "Неверный или истекший токен")
+            }
+    )
     public ResponseEntity<?> confirmResetPassword(@RequestParam String token, @RequestBody String newPassword) {
+        System.out.println("Password received for reset: '" + newPassword + "'");
         PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(token);
         if (passwordResetToken == null || passwordResetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or expired token");
@@ -122,6 +146,7 @@ public class SecurityController {
 
         String hashed = passwordEncoder.encode(newPassword);
         User user = passwordResetToken.getUser();
+        System.out.println("Reset password for user: " + user.getUsername() + ", new hash: " + hashed);
         user.setPassword(hashed);
         userRepository.save(user);
 

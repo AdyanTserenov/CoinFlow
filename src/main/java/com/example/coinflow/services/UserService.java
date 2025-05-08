@@ -25,7 +25,7 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findUserByUsername(username).orElseThrow(() -> new UsernameNotFoundException(
                 String.format("User '%s' not found", username)
         ));
-
+        System.out.println("User for login: " + user.getUsername() + ", hash: " + user.getPassword());
         return UserDetailsImpl.build(user);
     }
 }
