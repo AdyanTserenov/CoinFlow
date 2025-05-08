@@ -19,7 +19,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -84,37 +83,6 @@ public class SecurityController {
         }
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtCore.generateToken(authentication);
-        return ResponseEntity.ok(jwt);
-    }
-
-    @GetMapping("/oauth2/callback")
-    @Operation(
-            summary = "OAuth2 Callback",
-            description = "Обрабатывает OAuth2 callback и генерирует JWT токен для аутентифицированного пользователя",
-            responses = {
-            @ApiResponse(responseCode = "200", description = "JWT токен успешно сгенерирован"),
-            @ApiResponse(responseCode = "404", description = "Пользователь не найден"),
-            @ApiResponse(responseCode = "500", description = "Внутрення ошибка сервера")
-            }
-    )
-    public ResponseEntity<?> oauth2Callback(OAuth2AuthenticationToken authentication) {
-        String username = authentication.getPrincipal().getAttribute("username");
-        String email = authentication.getPrincipal().getAttribute("email");
-
-        User user = userRepository.findUserByUsername(username).orElseThrow(() -> new UsernameNotFoundException(
-                String.format("User '%s' not found", username)
-        ));
-
-        if (user == null) {
-            user = new User();
-            user.setUsername(username);
-            user.setEmail(email);
-            user.setPassword("");
-            userRepository.save(user);
-        }
-
-        String jwt = jwtCore.generateToken(new UsernamePasswordAuthenticationToken(user.getUsername(), null));
-
         return ResponseEntity.ok(jwt);
     }
 

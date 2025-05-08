@@ -68,16 +68,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/secured/**").fullyAuthenticated()
-                        .requestMatchers("/oauth2/**").permitAll()
                         .anyRequest().permitAll()
-                )
-                .oauth2Login(oauth2 -> oauth2
-                        .authorizationEndpoint(authorization -> authorization
-                                .baseUri("/oauth2/authorization")
-                        )
-                        .redirectionEndpoint(redirection -> redirection
-                                .baseUri("/login/oauth2/callback/*")
-                        )
                 )
                 .addFilterBefore(tokenFilter, UsernamePasswordAuthenticationFilter.class);
 
