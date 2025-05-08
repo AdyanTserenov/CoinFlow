@@ -30,7 +30,7 @@ services:
       - coinflow-network
 
   app:
-    image: coinflow-app
+    image: tserenov/coinflow-app:latest
     container_name: coinflow-app
     depends_on:
       - db
