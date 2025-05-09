@@ -28,7 +28,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/transactions")
-@Tag(name = "Transactions")
+@Tag(name = "Transactions", description = "API для управления транзакциями")
 @RequiredArgsConstructor
 public class TransactionController {
     private final TransactionService transactionService;

@@ -26,7 +26,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
-@Tag(name = "Security")
+@Tag(name = "Security", description = "API для управления авторизации")
 @RequiredArgsConstructor
 public class SecurityController {
 

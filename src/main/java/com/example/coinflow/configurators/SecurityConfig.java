@@ -69,6 +69,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/secured/**").fullyAuthenticated()
                         .requestMatchers("/transactions/**").fullyAuthenticated()
+                        .requestMatchers("/categories/**").fullyAuthenticated()
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(tokenFilter, UsernamePasswordAuthenticationFilter.class);
