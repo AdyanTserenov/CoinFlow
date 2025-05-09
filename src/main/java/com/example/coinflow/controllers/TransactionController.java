@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/transactions2")
+@RequestMapping("/transactions")
 @Tag(name = "Transactions")
 @RequiredArgsConstructor
 public class TransactionController {
