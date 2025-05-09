@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build,Push and Deploy Docker Image
 
 on:
   push:
@@ -42,12 +42,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,format=short
+          tags: latest
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -55,4 +50,25 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }} 
+          labels: ${{ steps.meta.outputs.labels }}
+    outputs:
+      image_tag: ${{ env.IMAGE_NAME }}:latest
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Echo image tag
+        run: echo "Using image ${{ env.IMAGE_NAME }}:latest"
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          script: |
+            docker pull ${{ env.IMAGE_NAME }}:latest
+            docker stop coinflow-container || true
+            docker rm coinflow-container || true
+            docker run -d --name coinflow-container --network coinflow-network -p 8080:8080 ${{ env.IMAGE_NAME }}:latest
