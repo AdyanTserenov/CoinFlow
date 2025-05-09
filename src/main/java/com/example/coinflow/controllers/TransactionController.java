@@ -13,6 +13,14 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import com.example.coinflow.models.TransactionRequest;
+import com.example.coinflow.models.TransactionResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,48 +36,130 @@ public class TransactionController {
 
     // Получить все транзакции пользователя
     @GetMapping
-    @Operation(summary = "Получить все транзакции пользователя", description = "Возвращает список всех транзакций текущего пользователя.")
-    @ApiResponse(responseCode = "200", description = "Список транзакций получен успешно")
-    public List<Transaction> getAll(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+    @Operation(
+        summary = "Получить все транзакции пользователя",
+        description = "Возвращает список всех транзакций текущего пользователя.",
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Список транзакций получен успешно",
+                content = @Content(array = @ArraySchema(schema = @Schema(implementation = TransactionResponse.class)))),
+            @ApiResponse(responseCode = "401", description = "Неавторизован")
+        }
+    )
+    public List<TransactionResponse> getAll(@AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userRepository.findUserByUsername(userDetails.getUsername()).orElseThrow();
-        return transactionService.getUserTransactions(user);
+        return transactionService.getUserTransactions(user).stream().map(this::toResponse).toList();
     }
 
     // Получить транзакцию по id
     @GetMapping("/{id}")
-    @Operation(summary = "Получить транзакцию по id", description = "Возвращает транзакцию по её идентификатору.")
-    @ApiResponse(responseCode = "200", description = "Транзакция найдена")
-    @ApiResponse(responseCode = "404", description = "Транзакция не найдена")
-    public ResponseEntity<Transaction> getById(@PathVariable Long id, @AuthenticationPrincipal UserDetailsImpl userDetails) {
+    @Operation(
+        summary = "Получить транзакцию по id",
+        description = "Возвращает транзакцию по её идентификатору.",
+        parameters = {
+            @Parameter(name = "id", description = "ID транзакции", example = "1", required = true)
+        },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Транзакция найдена",
+                content = @Content(schema = @Schema(implementation = TransactionResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Транзакция не найдена"),
+            @ApiResponse(responseCode = "401", description = "Неавторизован")
+        }
+    )
+    public ResponseEntity<TransactionResponse> getById(@PathVariable Long id, @AuthenticationPrincipal UserDetailsImpl userDetails) {
         Optional<Transaction> transaction = transactionService.getTransaction(id);
-        return transaction.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        return transaction.map(t -> ResponseEntity.ok(toResponse(t))).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // Создать транзакцию
     @PostMapping
-    @Operation(summary = "Создать транзакцию", description = "Создаёт новую транзакцию для текущего пользователя.")
-    @ApiResponse(responseCode = "200", description = "Транзакция успешно создана")
-    public Transaction create(@RequestBody Transaction transaction, @AuthenticationPrincipal UserDetailsImpl userDetails) {
+    @Operation(
+        summary = "Создать транзакцию",
+        description = "Создаёт новую транзакцию для текущего пользователя.",
+        requestBody = @RequestBody(
+            required = true,
+            description = "Данные транзакции",
+            content = @Content(
+                schema = @Schema(implementation = TransactionRequest.class),
+                examples = @ExampleObject(
+                    value = "{\n  \"amount\": 1500.00,\n  \"date\": \"2024-06-10T12:00:00\",\n  \"category\": \"Продукты\",\n  \"note\": \"Покупка в супермаркете\",\n  \"type\": \"EXPENSE\",\n  \"recurrence\": \"MONTHLY\",\n  \"nextOccurrence\": \"2024-07-10T12:00:00\"\n}"
+                )
+            )
+        ),
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Транзакция успешно создана",
+                content = @Content(schema = @Schema(implementation = TransactionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Неавторизован"),
+            @ApiResponse(responseCode = "400", description = "Ошибка валидации")
+        }
+    )
+    public TransactionResponse create(@RequestBody TransactionRequest request, @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userRepository.findUserByUsername(userDetails.getUsername()).orElseThrow();
+        Transaction transaction = new Transaction();
         transaction.setUser(user);
-        return transactionService.createTransaction(transaction);
+        transaction.setAmount(request.getAmount());
+        transaction.setDate(request.getDate());
+        transaction.setCategory(request.getCategory());
+        transaction.setNote(request.getNote());
+        transaction.setType(request.getType());
+        transaction.setRecurrence(request.getRecurrence());
+        transaction.setNextOccurrence(request.getNextOccurrence());
+        return toResponse(transactionService.createTransaction(transaction));
     }
 
     // Обновить транзакцию
     @PutMapping("/{id}")
-    @Operation(summary = "Обновить транзакцию", description = "Обновляет существующую транзакцию по id.")
-    @ApiResponse(responseCode = "200", description = "Транзакция успешно обновлена")
-    public ResponseEntity<Transaction> update(@PathVariable Long id, @RequestBody Transaction transaction, @AuthenticationPrincipal UserDetailsImpl userDetails) {
+    @Operation(
+        summary = "Обновить транзакцию",
+        description = "Обновляет существующую транзакцию по id.",
+        parameters = {
+            @Parameter(name = "id", description = "ID транзакции", example = "1", required = true)
+        },
+        requestBody = @RequestBody(
+            required = true,
+            description = "Обновлённые данные транзакции",
+            content = @Content(
+                schema = @Schema(implementation = TransactionRequest.class),
+                examples = @ExampleObject(
+                    value = "{\n  \"amount\": 2000.00,\n  \"date\": \"2024-06-15T12:00:00\",\n  \"category\": \"Кафе\",\n  \"note\": \"Обед\",\n  \"type\": \"EXPENSE\",\n  \"recurrence\": \"NONE\",\n  \"nextOccurrence\": null\n}"
+                )
+            )
+        ),
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Транзакция успешно обновлена",
+                content = @Content(schema = @Schema(implementation = TransactionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Неавторизован"),
+            @ApiResponse(responseCode = "404", description = "Транзакция не найдена")
+        }
+    )
+    public ResponseEntity<TransactionResponse> update(@PathVariable Long id, @RequestBody TransactionRequest request, @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userRepository.findUserByUsername(userDetails.getUsername()).orElseThrow();
+        Transaction transaction = new Transaction();
         transaction.setId(id);
         transaction.setUser(user);
-        return ResponseEntity.ok(transactionService.updateTransaction(transaction));
+        transaction.setAmount(request.getAmount());
+        transaction.setDate(request.getDate());
+        transaction.setCategory(request.getCategory());
+        transaction.setNote(request.getNote());
+        transaction.setType(request.getType());
+        transaction.setRecurrence(request.getRecurrence());
+        transaction.setNextOccurrence(request.getNextOccurrence());
+        return ResponseEntity.ok(toResponse(transactionService.updateTransaction(transaction)));
     }
 
     // Удалить транзакцию
     @DeleteMapping("/{id}")
-    @Operation(summary = "Удалить транзакцию", description = "Удаляет транзакцию по id.")
-    @ApiResponse(responseCode = "204", description = "Транзакция успешно удалена")
+    @Operation(
+        summary = "Удалить транзакцию",
+        description = "Удаляет транзакцию по id.",
+        parameters = {
+            @Parameter(name = "id", description = "ID транзакции", example = "1", required = true)
+        },
+        responses = {
+            @ApiResponse(responseCode = "204", description = "Транзакция успешно удалена"),
+            @ApiResponse(responseCode = "401", description = "Неавторизован"),
+            @ApiResponse(responseCode = "404", description = "Транзакция не найдена")
+        }
+    )
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         transactionService.deleteTransaction(id);
         return ResponseEntity.noContent().build();
@@ -77,30 +167,75 @@ public class TransactionController {
 
     // Фильтрация по дате
     @GetMapping("/by-date")
-    @Operation(summary = "Фильтрация транзакций по дате", description = "Возвращает транзакции пользователя за указанный период.")
-    @ApiResponse(responseCode = "200", description = "Список транзакций за период получен успешно")
-    public List<Transaction> byDate(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+    @Operation(
+        summary = "Фильтрация транзакций по дате",
+        description = "Возвращает транзакции пользователя за указанный период.",
+        parameters = {
+            @Parameter(name = "start", description = "Начальная дата (ISO 8601)", example = "2024-06-01T00:00:00", required = true),
+            @Parameter(name = "end", description = "Конечная дата (ISO 8601)", example = "2024-06-30T23:59:59", required = true)
+        },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Список транзакций за период получен успешно",
+                content = @Content(array = @ArraySchema(schema = @Schema(implementation = TransactionResponse.class)))),
+            @ApiResponse(responseCode = "401", description = "Неавторизован")
+        }
+    )
+    public List<TransactionResponse> byDate(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
                                     @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
                                     @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userRepository.findUserByUsername(userDetails.getUsername()).orElseThrow();
-        return transactionService.getUserTransactionsByDate(user, start, end);
+        return transactionService.getUserTransactionsByDate(user, start, end).stream().map(this::toResponse).toList();
     }
 
     // Фильтрация по категории
     @GetMapping("/by-category")
-    @Operation(summary = "Фильтрация транзакций по категории", description = "Возвращает транзакции пользователя по категории.")
-    @ApiResponse(responseCode = "200", description = "Список транзакций по категории получен успешно")
-    public List<Transaction> byCategory(@RequestParam String category, @AuthenticationPrincipal UserDetailsImpl userDetails) {
+    @Operation(
+        summary = "Фильтрация транзакций по категории",
+        description = "Возвращает транзакции пользователя по категории.",
+        parameters = {
+            @Parameter(name = "category", description = "Категория транзакции", example = "Продукты", required = true)
+        },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Список транзакций по категории получен успешно",
+                content = @Content(array = @ArraySchema(schema = @Schema(implementation = TransactionResponse.class)))),
+            @ApiResponse(responseCode = "401", description = "Неавторизован")
+        }
+    )
+    public List<TransactionResponse> byCategory(@RequestParam String category, @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userRepository.findUserByUsername(userDetails.getUsername()).orElseThrow();
-        return transactionService.getUserTransactionsByCategory(user, category);
+        return transactionService.getUserTransactionsByCategory(user, category).stream().map(this::toResponse).toList();
     }
 
     // Фильтрация по типу (INCOME/EXPENSE)
     @GetMapping("/by-type")
-    @Operation(summary = "Фильтрация транзакций по типу", description = "Возвращает транзакции пользователя по типу (INCOME/EXPENSE).")
-    @ApiResponse(responseCode = "200", description = "Список транзакций по типу получен успешно")
-    public List<Transaction> byType(@RequestParam String type, @AuthenticationPrincipal UserDetailsImpl userDetails) {
+    @Operation(
+        summary = "Фильтрация транзакций по типу",
+        description = "Возвращает транзакции пользователя по типу (INCOME/EXPENSE).",
+        parameters = {
+            @Parameter(name = "type", description = "Тип транзакции: INCOME или EXPENSE", example = "INCOME", required = true)
+        },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Список транзакций по типу получен успешно",
+                content = @Content(array = @ArraySchema(schema = @Schema(implementation = TransactionResponse.class)))),
+            @ApiResponse(responseCode = "401", description = "Неавторизован")
+        }
+    )
+    public List<TransactionResponse> byType(@RequestParam String type, @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userRepository.findUserByUsername(userDetails.getUsername()).orElseThrow();
-        return transactionService.getUserTransactionsByType(user, type);
+        return transactionService.getUserTransactionsByType(user, type).stream().map(this::toResponse).toList();
+    }
+
+    // Маппер из Transaction в TransactionResponse
+    private TransactionResponse toResponse(Transaction t) {
+        TransactionResponse dto = new TransactionResponse();
+        dto.setId(t.getId());
+        dto.setAmount(t.getAmount());
+        dto.setDate(t.getDate());
+        dto.setCategory(t.getCategory());
+        dto.setNote(t.getNote());
+        dto.setType(t.getType());
+        dto.setRecurrence(t.getRecurrence());
+        dto.setNextOccurrence(t.getNextOccurrence());
+        return dto;
     }
 } 
