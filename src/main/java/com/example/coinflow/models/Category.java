@@ -47,4 +47,8 @@ public class Category {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private ZonedDateTime updatedAt;
+
+    @Column(name = "limit_amount")
+    @Schema(description = "Лимит расходов по категории", example = "10000.00")
+    private java.math.BigDecimal limit;
 }

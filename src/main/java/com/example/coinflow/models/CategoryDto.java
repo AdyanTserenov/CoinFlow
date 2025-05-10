@@ -19,7 +19,9 @@ public class CategoryDto {
     public ZonedDateTime createdAt;
     @Schema(description = "Дата и время последнего обновления категории", example = "2025-05-10T01:01:27.077091+03:00")
     public ZonedDateTime updatedAt;
-    public CategoryDto(Long id, String name, String description, boolean isDefault, Long userId, ZonedDateTime createdAt, ZonedDateTime updatedAt) {
+    @Schema(description = "Лимит расходов по категории", example = "10000.00")
+    public java.math.BigDecimal limit;
+    public CategoryDto(Long id, String name, String description, boolean isDefault, Long userId, ZonedDateTime createdAt, ZonedDateTime updatedAt, java.math.BigDecimal limit) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -27,6 +29,7 @@ public class CategoryDto {
         this.userId = userId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.limit = limit;
     }
     public CategoryDto() {}
 } 

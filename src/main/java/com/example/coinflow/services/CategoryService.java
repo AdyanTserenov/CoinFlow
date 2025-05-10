@@ -43,6 +43,7 @@ public class CategoryService {
 
         existingCategory.setName(updatedCategory.getName());
         existingCategory.setDescription(updatedCategory.getDescription());
+        existingCategory.setLimit(updatedCategory.getLimit());
         return categoryRepository.save(existingCategory);
     }
 

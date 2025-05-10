@@ -47,7 +47,8 @@ public class CategoryController {
                 category.isDefault(),
                 category.getUser() != null ? category.getUser().getId() : null,
                 category.getCreatedAt(),
-                category.getUpdatedAt()
+                category.getUpdatedAt(),
+                category.getLimit()
         );
     }
 
@@ -119,7 +120,8 @@ public class CategoryController {
                         value = """
                         {
                             \"name\": \"Развлечения\",
-                            \"description\": \"Расходы на кино, театры, концерты\"
+                            \"description\": \"Расходы на кино, театры, концерты\",
+                            \"limit\": 10000.00
                         }
                         """
                     )
@@ -128,6 +130,9 @@ public class CategoryController {
             @RequestBody Category category,
             @Parameter(description = "Текущий авторизованный пользователь")
             @AuthenticationPrincipal UserDetails principal) {
+        if (category.getLimit() != null && category.getLimit().signum() < 0) {
+            return ResponseEntity.badRequest().body(null);
+        }
         String username = principal.getUsername();
         User user = userRepository.findUserByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -180,7 +185,7 @@ public class CategoryController {
                     examples = @ExampleObject(
                         name = "Пример обновления категории",
                         value = """
-                        {\"name\": \"Развлечения и досуг\",\"description\": \"Расходы на кино, театры, концерты и другие развлечения\"}
+                        {\"name\": \"Развлечения и досуг\",\"description\": \"Расходы на кино, театры, концерты и другие развлечения\",\"limit\": 15000.00} 
                         """
                     )
                 )
@@ -188,6 +193,9 @@ public class CategoryController {
             @RequestBody Category category,
             @Parameter(description = "Текущий авторизованный пользователь")
             @AuthenticationPrincipal UserDetails principal) {
+        if (category.getLimit() != null && category.getLimit().signum() < 0) {
+            return ResponseEntity.badRequest().body("Лимит не может быть отрицательным");
+        }
         try {
             String username = principal.getUsername();
             User user = userRepository.findUserByUsername(username)
