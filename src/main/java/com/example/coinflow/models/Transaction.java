@@ -27,8 +27,10 @@ public class Transaction {
     @Schema(description = "Дата транзакции", example = "2024-06-10T12:00:00")
     private LocalDateTime date;
 
-    @Schema(description = "Категория транзакции", example = "Продукты")
-    private String category;
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    @Schema(description = "Категория транзакции")
+    private Category category;
 
     @Schema(description = "Заметка к транзакции", example = "Покупка в супермаркете")
     private String note;

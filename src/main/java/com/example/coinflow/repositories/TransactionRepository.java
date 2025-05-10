@@ -2,6 +2,7 @@ package com.example.coinflow.repositories;
 
 import com.example.coinflow.models.Transaction;
 import com.example.coinflow.models.User;
+import com.example.coinflow.models.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,7 +13,7 @@ import java.util.List;
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     List<Transaction> findByUser(User user);
     List<Transaction> findByUserAndDateBetween(User user, LocalDateTime start, LocalDateTime end);
-    List<Transaction> findByUserAndCategory(User user, String category);
+    List<Transaction> findByUserAndCategory(User user, Category category);
     List<Transaction> findByUserAndType(User user, String type);
     List<Transaction> findByRecurrenceNotAndNextOccurrenceBefore(String recurrence, LocalDateTime now);
 } 

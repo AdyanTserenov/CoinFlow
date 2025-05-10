@@ -21,6 +21,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import com.example.coinflow.models.TransactionRequest;
 import com.example.coinflow.models.TransactionResponse;
+import com.example.coinflow.repositories.CategoryRepository;
+import com.example.coinflow.models.Category;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,6 +35,7 @@ import java.util.Optional;
 public class TransactionController {
     private final TransactionService transactionService;
     private final UserRepository userRepository;
+    private final CategoryRepository categoryRepository;
 
     // Получить все транзакции пользователя
     @GetMapping
@@ -81,7 +84,7 @@ public class TransactionController {
             content = @Content(
                 schema = @Schema(implementation = TransactionRequest.class),
                 examples = @ExampleObject(
-                    value = "{\n  \"amount\": 1500.00,\n  \"date\": \"2024-06-10T12:00:00\",\n  \"category\": \"Продукты\",\n  \"note\": \"Покупка в супермаркете\",\n  \"type\": \"EXPENSE\",\n  \"recurrence\": \"MONTHLY\",\n  \"nextOccurrence\": \"2024-07-10T12:00:00\"\n}"
+                    value = "{\n  \"amount\": 1500.00,\n  \"date\": \"2024-06-10T12:00:00\",\n  \"categoryId\": 1,\n  \"note\": \"Покупка в супермаркете\",\n  \"type\": \"EXPENSE\",\n  \"recurrence\": \"MONTHLY\",\n  \"nextOccurrence\": \"2024-07-10T12:00:00\"\n}"
                 )
             )
         ),
@@ -92,18 +95,29 @@ public class TransactionController {
             @ApiResponse(responseCode = "400", description = "Ошибка валидации")
         }
     )
-    public TransactionResponse create(@RequestBody TransactionRequest request, @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        User user = userRepository.findUserByUsername(userDetails.getUsername()).orElseThrow();
-        Transaction transaction = new Transaction();
-        transaction.setUser(user);
-        transaction.setAmount(request.getAmount());
-        transaction.setDate(request.getDate());
-        transaction.setCategory(request.getCategory());
-        transaction.setNote(request.getNote());
-        transaction.setType(request.getType());
-        transaction.setRecurrence(request.getRecurrence());
-        transaction.setNextOccurrence(request.getNextOccurrence());
-        return toResponse(transactionService.createTransaction(transaction));
+    public ResponseEntity<?> create(@RequestBody TransactionRequest request, @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        try {
+            User user = userRepository.findUserByUsername(userDetails.getUsername()).orElseThrow();
+            System.out.println("Request: " + request);
+            System.out.println("categoryId: " + request.getCategoryId());
+            System.out.println("amount: " + request.getAmount());
+            System.out.println("date: " + request.getDate());
+            Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new RuntimeException("Категория не найдена"));
+            Transaction transaction = new Transaction();
+            transaction.setUser(user);
+            transaction.setCategory(category);
+            transaction.setAmount(request.getAmount());
+            transaction.setDate(request.getDate());
+            transaction.setNote(request.getNote());
+            transaction.setType(request.getType());
+            transaction.setRecurrence(request.getRecurrence());
+            transaction.setNextOccurrence(request.getNextOccurrence());
+            return ResponseEntity.ok(toResponse(transactionService.createTransaction(transaction)));
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return ResponseEntity.badRequest().body("Ошибка создания транзакции: " + ex.getMessage());
+        }
     }
 
     // Обновить транзакцию
@@ -133,12 +147,15 @@ public class TransactionController {
     )
     public ResponseEntity<TransactionResponse> update(@PathVariable Long id, @RequestBody TransactionRequest request, @AuthenticationPrincipal UserDetailsImpl userDetails) {
         User user = userRepository.findUserByUsername(userDetails.getUsername()).orElseThrow();
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new RuntimeException("Категория не найдена"));
+
         Transaction transaction = new Transaction();
         transaction.setId(id);
         transaction.setUser(user);
         transaction.setAmount(request.getAmount());
         transaction.setDate(request.getDate());
-        transaction.setCategory(request.getCategory());
+        transaction.setCategory(category);
         transaction.setNote(request.getNote());
         transaction.setType(request.getType());
         transaction.setRecurrence(request.getRecurrence());
@@ -231,11 +248,16 @@ public class TransactionController {
         dto.setId(t.getId());
         dto.setAmount(t.getAmount());
         dto.setDate(t.getDate());
-        dto.setCategory(t.getCategory());
+        dto.setCategoryId(t.getCategory().getId());
         dto.setNote(t.getNote());
         dto.setType(t.getType());
         dto.setRecurrence(t.getRecurrence());
         dto.setNextOccurrence(t.getNextOccurrence());
         return dto;
+    }
+
+    @PostMapping("/debug")
+    public void debug(@RequestBody String raw) {
+        System.out.println("RAW JSON: " + raw);
     }
 } 

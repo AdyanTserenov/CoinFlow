@@ -2,7 +2,9 @@ package com.example.coinflow.services;
 
 import com.example.coinflow.models.Transaction;
 import com.example.coinflow.models.User;
+import com.example.coinflow.models.Category;
 import com.example.coinflow.repositories.TransactionRepository;
+import com.example.coinflow.repositories.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +17,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class TransactionService {
     private final TransactionRepository transactionRepository;
+    private final CategoryRepository categoryRepository;
 
     public List<Transaction> getUserTransactions(User user) {
         return transactionRepository.findByUser(user);
@@ -43,7 +46,9 @@ public class TransactionService {
         return transactionRepository.findByUserAndDateBetween(user, start, end);
     }
 
-    public List<Transaction> getUserTransactionsByCategory(User user, String category) {
+    public List<Transaction> getUserTransactionsByCategory(User user, String categoryName) {
+        Category category = categoryRepository.findByName(categoryName)
+            .orElseThrow(() -> new RuntimeException("Категория не найдена"));
         return transactionRepository.findByUserAndCategory(user, category);
     }
 

@@ -17,8 +17,8 @@ public class TransactionResponse {
     @Schema(description = "Дата транзакции", example = "2024-06-10T12:00:00")
     private LocalDateTime date;
 
-    @Schema(description = "Категория транзакции", example = "Продукты")
-    private String category;
+    @Schema(description = "id категории транзакции", example = "3")
+    private Long categoryId;
 
     @Schema(description = "Заметка к транзакции", example = "Покупка в супермаркете")
     private String note;
