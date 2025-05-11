@@ -89,11 +89,11 @@ public class SecurityController {
     @PostMapping("/reset-password")
     @Operation(
             summary = "Запрос на сброс пароля",
-            description = "Отправляет email со ссылкой для сброса пароля на указанный email адрес. " +
+            description = "Отправляет email с токеном для сброса пароля на указанный email адрес. " +
                     "Ссылка действительна в течение 1 часа. " +
                     "Если пользователь с указанным email не найден, возвращает ошибку.",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Ссылка для сброса пароля отправлена на email"),
+                    @ApiResponse(responseCode = "200", description = "Токен для сброса пароля отправлен на email"),
                     @ApiResponse(responseCode = "404", description = "Пользователь с указанным email не найден")
             }
     )
