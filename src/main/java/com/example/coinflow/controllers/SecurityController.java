@@ -115,15 +115,14 @@ public class SecurityController {
         passwordResetTokenRepository.save(passwordResetToken);
 
         // 4. Отправляет email с ссылкой для сброса
-        String resetLink = "http://localhost:8080/auth/reset-password?token=" + token;
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom("abtserenov@edu.hse.ru");
         message.setTo(request.getEmail());
         message.setSubject("Password Reset Request");
-        message.setText("To reset your password, click the link below:\n" + resetLink);
+        message.setText("To reset your password, copy the token below:\n" + token);
         mailSender.send(message);
 
-        return ResponseEntity.ok("Password reset link sent to your email");
+        return ResponseEntity.ok("Password reset token sent to your email");
     }
 
     @PostMapping("/reset-password/confirm")
